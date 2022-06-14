@@ -105,7 +105,7 @@ class App extends Component {
           recoveredAddress = result;
         });
 
-        await contract.methods.verify(typedData.message, v, r, s).call({from:accounts[0]})
+        await contract.methods.verify(accounts[0], typedData.message, v, r, s).call({from:accounts[0]})
         .then(function(result){
           resultVerify = result;
         });

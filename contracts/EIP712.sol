@@ -71,7 +71,7 @@ contract EIP712{
           ));
       return ecrecover(digest, v, r, s);
     }
-    function verify(Mail memory mail, uint8 v, bytes32 r, bytes32 s) public view returns(bool){
-      return recoverAddress(mail, v, r, s) == mail.from.wallet;
+    function verify(address addr, Mail memory mail, uint8 v, bytes32 r, bytes32 s) public view returns(bool){
+      return recoverAddress(mail, v, r, s) == addr;
     }
 }
