@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
-
+pragma experimental ABIEncoderV2;
 contract EIP712{
     struct EIP712Domain{
         string name;
@@ -63,7 +63,7 @@ contract EIP712{
             keccak256(bytes(mail.contents))
         ));
     }
-    function recoverAddress(Mail memory mail, uint8 v, bytes32 r, bytes32 s) internal view returns(address){
+    function recoverAddress(Mail memory mail, uint8 v, bytes32 r, bytes32 s) public view returns(address){
       bytes32 digest = keccak256(abi.encodePacked(
               "\x19\x01",
               DOMAIN_SEPARATOR,
@@ -71,35 +71,7 @@ contract EIP712{
           ));
       return ecrecover(digest, v, r, s);
     }
-    function recoverAddress(uint8 v, bytes32 r, bytes32 s, string memory fromName, address fromWallet, string memory toName, address toWallet, string memory contents) public view returns(address){
-      Person memory from;
-        from.name = fromName;
-        from.wallet = fromWallet;
-        Person memory to;
-        to.name = toName;
-        to.wallet = toWallet;
-        Mail memory mail;
-        mail.from = from;
-        mail.to = to;
-        mail.contents = contents;
-      bytes32 digest = keccak256(abi.encodePacked(
-              "\x19\x01",
-              DOMAIN_SEPARATOR,
-              hash(mail)
-          ));
-      return ecrecover(digest, v, r, s);
-    }
-    function verify(uint8 v, bytes32 r, bytes32 s, string memory fromName, address fromWallet, string memory toName, address toWallet, string memory contents) public view returns (bool) {
-        Person memory from;
-        from.name = fromName;
-        from.wallet = fromWallet;
-        Person memory to;
-        to.name = toName;
-        to.wallet = toWallet;
-        Mail memory mail;
-        mail.from = from;
-        mail.to = to;
-        mail.contents = contents;
-        return recoverAddress(mail, v, r, s) == mail.from.wallet;
+    function verify(Mail memory mail, uint8 v, bytes32 r, bytes32 s) public view returns(bool){
+      return recoverAddress(mail, v, r, s) == mail.from.wallet;
     }
 }

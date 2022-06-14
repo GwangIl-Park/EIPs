@@ -99,14 +99,13 @@ class App extends Component {
         const v = '0x' + signature.slice(128, 130)
         let recoveredAddress;
         let resultVerify;
-        await contract.methods.recoverAddress(v, r, s, typedData.message.from.name, typedData.message.from.wallet, typedData.message.to.name, typedData.message.to.wallet, typedData.message.contents).call({from:accounts[0]})
+
+        await contract.methods.recoverAddress(typedData.message, v, r, s).call({from:accounts[0]})
         .then(function(result){
           recoveredAddress = result;
         });
 
-
-
-        await contract.methods.verify(v, r, s, typedData.message.from.name, typedData.message.from.wallet, typedData.message.to.name, typedData.message.to.wallet, typedData.message.contents).call({from:accounts[0]})
+        await contract.methods.verify(typedData.message, v, r, s).call({from:accounts[0]})
         .then(function(result){
           resultVerify = result;
         });
