@@ -1,4 +1,5 @@
-pragma solidity 0.8.14;
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.22 <0.9.0;
 
 contract EIP712{
     struct EIP712Domain{
@@ -17,13 +18,13 @@ contract EIP712{
         string contents;
     }
     bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,string version uint256 chainId,address verifyingContract)"
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
     bytes32 constant PERSON_TYPEHASH = keccak256(
-        "Person(string name,address addr)"
+        "Person(string name,address wallet)"
     );
     bytes32 constant MAIL_TYPEHASH = keccak256(
-        "Main(Person from,Person to,string contents)Person(string name,address wallet)"
+        "Mail(Person from,Person to,string contents)Person(string name,address wallet)"
     );
     bytes32 DOMAIN_SEPARATOR;
 
@@ -31,7 +32,7 @@ contract EIP712{
         DOMAIN_SEPARATOR = hash(EIP712Domain({
             name: "Ether Mail",
             version: '1',
-            chainId: 5777,
+            chainId: 1337,
             verifyingContract: address(this)
         }));
     }
@@ -62,13 +63,43 @@ contract EIP712{
             keccak256(bytes(mail.contents))
         ));
     }
-    function verify(Mail memory mail, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
-        // Note: we need to use `encodePacked` here instead of `encode`.
-        bytes32 digest = keccak256(abi.encodePacked(
-            "\x19\x01",
-            DOMAIN_SEPARATOR,
-            hash(mail)
-        ));
-        return ecrecover(digest, v, r, s) == mail.from.wallet;
+    function recoverAddress(Mail memory mail, uint8 v, bytes32 r, bytes32 s) internal view returns(address){
+      bytes32 digest = keccak256(abi.encodePacked(
+              "\x19\x01",
+              DOMAIN_SEPARATOR,
+              hash(mail)
+          ));
+      return ecrecover(digest, v, r, s);
+    }
+    function recoverAddress(uint8 v, bytes32 r, bytes32 s, string memory fromName, address fromWallet, string memory toName, address toWallet, string memory contents) public view returns(address){
+      Person memory from;
+        from.name = fromName;
+        from.wallet = fromWallet;
+        Person memory to;
+        to.name = toName;
+        to.wallet = toWallet;
+        Mail memory mail;
+        mail.from = from;
+        mail.to = to;
+        mail.contents = contents;
+      bytes32 digest = keccak256(abi.encodePacked(
+              "\x19\x01",
+              DOMAIN_SEPARATOR,
+              hash(mail)
+          ));
+      return ecrecover(digest, v, r, s);
+    }
+    function verify(uint8 v, bytes32 r, bytes32 s, string memory fromName, address fromWallet, string memory toName, address toWallet, string memory contents) public view returns (bool) {
+        Person memory from;
+        from.name = fromName;
+        from.wallet = fromWallet;
+        Person memory to;
+        to.name = toName;
+        to.wallet = toWallet;
+        Mail memory mail;
+        mail.from = from;
+        mail.to = to;
+        mail.contents = contents;
+        return recoverAddress(mail, v, r, s) == mail.from.wallet;
     }
 }

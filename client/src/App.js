@@ -6,10 +6,9 @@ import "./App.css";
 
 var ethUtil = require('ethereumjs-util');
 var sigUtil = require('eth-sig-util');
-
+let deployedNetwork;
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
-
+  state = { web3: null, accounts: null, contract: null };
   componentDidMount = async () => {
     try {
       // Get network provider and web3 instance.
@@ -17,10 +16,9 @@ class App extends Component {
 
       // Use web3 to get the user's accounts.
       const accounts = await web3.eth.getAccounts();
-
       // Get the contract instance.
       const networkId = await web3.eth.net.getId();
-      const deployedNetwork = EIP712.networks[networkId];
+      deployedNetwork = EIP712.networks[networkId];
       const instance = new web3.eth.Contract(
         EIP712.abi,
         deployedNetwork && deployedNetwork.address,
@@ -40,6 +38,7 @@ class App extends Component {
 
 
   runExample = async () => {
+    const { web3, accounts, contract } = this.state;
     const typedData = {
       types: {
           EIP712Domain: [
@@ -63,21 +62,20 @@ class App extends Component {
           name: 'Ether Mail',
           version: '1',
           chainId: 1337,
-          verifyingContract: '0x9297CF267D624a6Dd535487784865BDcDd437915',
+          verifyingContract: deployedNetwork.address,
       },
       message: {
           from: {
               name: 'Alice',
-              wallet: '0xBd38a82611b0B1C3f027a3dEeb4CBBcf29A248f0',
+              wallet: '0x9cEBAaB21C47b8F1FDB29AF9ddF963d88CBc1E0B',
           },
           to: {
               name: 'Bob',
-              wallet: '0x323aA5668A80Ee1ef4168694031A8b069192aAd1',
+              wallet: '0xB499965155Ad04c0b3ee93bF13d6Fd8f5D911104',
           },
           contents: 'Hello, Bob!',
       },
     };
-    const { web3, accounts, contract } = this.state;
     const msgParams = JSON.stringify(typedData)
     let from = accounts[0];
     var params = [from, msgParams]
@@ -87,29 +85,34 @@ class App extends Component {
         params,
         from,
       }, async function (err, result) {
-        const recovered = sigUtil.recoverTypedSignature({ data: JSON.parse(msgParams), sig: result.result })
+
+        /*const recovered = sigUtil.recoverTypedSignature({ data: JSON.parse(msgParams), sig: result.result })
     
         if (ethUtil.toChecksumAddress(recovered) === ethUtil.toChecksumAddress(from)) {
           alert('Successfully ecRecovered signer as ' + from)
         } else {
           alert('Failed to verify signer when comparing ' + result + ' to ' + from)
-        }
-        const signature = result.result.substring(2);
-        const r = "0x" + signature.substring(0, 64);
-        const s = "0x" + signature.substring(64, 128);
-        const v = parseInt(signature.substring(128, 130), 16);
-        console.log("r:", r);
-        console.log("s:", s);
-        console.log("v:", v);
-    // Stores a given value, 5 by default.
-        await contract.methods.verify(typedData.message,v,r,s).send({ from: accounts[0] });
+        }*/
+        const signature = result.result.substr(2); //remove 0x
+        const r = '0x' + signature.slice(0, 64)
+        const s = '0x' + signature.slice(64, 128)
+        const v = '0x' + signature.slice(128, 130)
+        let recoveredAddress;
+        let resultVerify;
+        await contract.methods.recoverAddress(v, r, s, typedData.message.from.name, typedData.message.from.wallet, typedData.message.to.name, typedData.message.to.wallet, typedData.message.contents).call({from:accounts[0]})
+        .then(function(result){
+          recoveredAddress = result;
+        });
+
+
+
+        await contract.methods.verify(v, r, s, typedData.message.from.name, typedData.message.from.wallet, typedData.message.to.name, typedData.message.to.wallet, typedData.message.contents).call({from:accounts[0]})
+        .then(function(result){
+          resultVerify = result;
+        });
+        alert("account : "+accounts[0]+"\nrecoveredAccount : "+recoveredAddress+"\nresult : "+resultVerify)
       }
     );
-    // Get the value from the contract to prove it worked.
-    //const response = await contract.methods.get().call();
-
-    // Update state with the result.
-    //this.setState({ storageValue: response });
   };
 
   render() {
@@ -118,17 +121,7 @@ class App extends Component {
     }
     return (
       <div className="App">
-        <h1>Good to Go!</h1>
-        <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
-        <p>
-          If your contracts compiled and migrated successfully, below will show
-          a stored value of 5 (by default).
-        </p>
-        <p>
-          Try changing the value stored on <strong>line 42</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
+        <div>account            : {this.state.accounts[0]}</div>
       </div>
     );
   }
